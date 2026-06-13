@@ -51,17 +51,24 @@ final class ClaudeTracker: AITokenTracker {
     func refresh() async {
         guard isAvailable else { return }
         
-        // Find the most recently modified JSONL file in projects dir
-        guard let files = try? FileManager.default.contentsOfDirectory(at: projectsDir, includingPropertiesForKeys: [.contentModificationDateKey]) else { return }
+        guard let enumerator = FileManager.default.enumerator(at: projectsDir, includingPropertiesForKeys: [.contentModificationDateKey], options: [.skipsHiddenFiles]),
+              let allURLs = enumerator.allObjects as? [URL] else { return }
         
-        let jsonlFiles = files.filter { $0.pathExtension == "jsonl" }
+        var latestFile: URL?
+        var latestDate = Date.distantPast
         
-        if let latestFile = jsonlFiles.max(by: { a, b in
-            let dateA = (try? a.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
-            let dateB = (try? b.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
-            return dateA < dateB
-        }) {
-            parseLogFile(latestFile)
+        for url in allURLs {
+            if url.pathExtension == "jsonl" {
+                let date = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? .distantPast
+                if date > latestDate {
+                    latestDate = date
+                    latestFile = url
+                }
+            }
+        }
+        
+        if let file = latestFile {
+            parseLogFile(file)
         }
     }
     
@@ -83,15 +90,24 @@ final class ClaudeTracker: AITokenTracker {
             guard let jsonData = line.data(using: .utf8),
                   let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] else { continue }
             
-            // Look for token usage fields in the JSON
+            // Look for token usage fields in the JSON (can be at root or inside message)
+            var currentUsage: [String: Any]? = nil
             if let usage = json["usage"] as? [String: Any] {
+                currentUsage = usage
+            } else if let message = json["message"] as? [String: Any], let usage = message["usage"] as? [String: Any] {
+                currentUsage = usage
+            }
+            
+            if let usage = currentUsage {
                 inputTokens += (usage["input_tokens"] as? Int) ?? 0
                 outputTokens += (usage["output_tokens"] as? Int) ?? 0
-                cacheReadTokens += (usage["cache_read_tokens"] as? Int) ?? 0
-                cacheWriteTokens += (usage["cache_creation_tokens"] as? Int) ?? 0
+                cacheReadTokens += (usage["cache_read_input_tokens"] as? Int) ?? (usage["cache_read_tokens"] as? Int) ?? 0
+                cacheWriteTokens += (usage["cache_creation_input_tokens"] as? Int) ?? (usage["cache_creation_tokens"] as? Int) ?? 0
             }
             
             if let model = json["model"] as? String {
+                lastModel = model
+            } else if let message = json["message"] as? [String: Any], let model = message["model"] as? String {
                 lastModel = model
             }
         }
