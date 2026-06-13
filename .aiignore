@@ -1,0 +1,17 @@
+# === SECRETS & CERTS (Keep out of source control) ===
+*.pem
+*.key
+*.crt
+*.cert
+*.pfx
+.env*
+secrets/
+certs/
+
+# === SWIFT & XCODE ===
+.build/
+.swiftpm/
+DerivedData/
+xcuserdata/
+*.app
+Package.resolved

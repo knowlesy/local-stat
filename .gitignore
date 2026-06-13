@@ -1,0 +1,42 @@
+# ==============================================================================
+# 1. CORE SECURITY, KEYS, & CERTS
+# ==============================================================================
+*.pem
+*.key
+*.crt
+*.cert
+*.pfx
+*.csr
+.env*
+secrets/
+certs/
+
+# ==============================================================================
+# 2. SYSTEM & IDE CLUTTER
+# ==============================================================================
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE - VS Code / Cursor
+.vscode/
+!.vscode/extensions.json
+.history/
+*.code-workspace
+.editorconfig.local
+
+# ==============================================================================
+# 3. SWIFT & XCODE
+# ==============================================================================
+.build/
+.swiftpm/
+xcuserdata/
+DerivedData/
+*.app
+*.ipa
+*.dSYM.zip
+*.dSYM
+Package.resolved
+*.xcodeproj
+*.xcworkspace
+*.dmg
